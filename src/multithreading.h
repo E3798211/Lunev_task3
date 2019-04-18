@@ -34,13 +34,15 @@ struct arg_t
     double left;
     double right;
     double sum;
-//    char   fill[32*1024 - 3*sizeof(double)];
     double fill[5];
 };
 
+
+double integrate(double left_bound, double right_bound, size_t n_threads);
 void* routine(void* arg);
 int start_threads(struct sysconfig_t* sys, size_t n_threads, 
-                         pthread_t tids[], struct arg_t args[]);
+                         pthread_t tids[], struct arg_t args[],
+                         double left_bound, double right_bound);
 int join_threads (struct sysconfig_t* sys, size_t n_threads, 
                          pthread_t tids[], struct arg_t args[], double* sum);
 

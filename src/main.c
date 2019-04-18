@@ -49,7 +49,6 @@ int main(int argc, char** argv)
     errno = 0;
     struct arg_t* thread_args = 
         aligned_alloc(sys.cache_line, sys.cache_line * n_thread_args);
-//        aligned_alloc(4096, 32*1024 * n_thread_args);
     if (!thread_args)
     {
         perror("posix_memalign()");
@@ -63,7 +62,8 @@ int main(int argc, char** argv)
                      sys.n_proc_onln : n_threads)];
 
     DBG printf("Starting threads\n");
-    if (start_threads(&sys, n_threads, tids, thread_args))
+    if (start_threads(&sys, n_threads, tids, thread_args, 
+                      LEFT_BOUND, RIGHT_BOUND))
     {
         printf("start_threads() failed\n");
         return EXIT_FAILURE;

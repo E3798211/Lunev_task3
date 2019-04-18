@@ -1,6 +1,6 @@
 # Compile settings
 CC=gcc
-CFLAGS=-Wall -pthread -std=c11 # -O2
+CFLAGS=-Wall -pthread -std=c11 -O2
 LFLAGS=-pthread
 
 # Sources
@@ -16,8 +16,7 @@ MASTER=$(BIN)/master
 SLAVE=$(BIN)/slave
 
 # Specific variables
-debug:		CFLAGS +=-DDEBUG
-
+debug:		CFLAGS +=-DDEBUG -g
 
 all: release
 

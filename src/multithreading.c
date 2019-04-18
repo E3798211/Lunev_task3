@@ -1,6 +1,58 @@
 
 #include "multithreading.h"
 
+double integrate(double left_bound, double right_bound, size_t n_threads)
+{
+    DBG printf("Requested for threads\t%4lu\n\n", n_threads);
+
+    struct sysconfig_t sys;
+    if (get_system_config(&sys))
+    {
+        printf("get_system_config() failed\n");
+        return EXIT_FAILURE;
+    }
+   
+    size_t n_thread_args = 
+        ((n_threads < sys.n_proc_onln)? sys.n_proc_onln : n_threads);
+    DBG printf("Creating  args:\t\t%4lu\n", n_thread_args);
+
+    errno = 0;
+    struct arg_t* thread_args = 
+        aligned_alloc(sys.cache_line, sys.cache_line * n_thread_args);
+    if (!thread_args)
+    {
+        perror("posix_memalign()");
+        return EXIT_FAILURE;
+    }
+    DBG printf("Allocated %lu bytes each %lu bytes aligned to %p\n\n",
+               sys.cache_line * n_thread_args, sizeof(struct arg_t), 
+               thread_args);
+    
+    pthread_t tids[((n_threads < sys.n_proc_onln)? 
+                     sys.n_proc_onln : n_threads)];
+
+    DBG printf("Starting threads\n");
+    if (start_threads(&sys, n_threads, tids, thread_args, 
+                      LEFT_BOUND, RIGHT_BOUND))
+    {
+        printf("start_threads() failed\n");
+        return EXIT_FAILURE;
+    }
+
+    DBG printf("Joining threads\n");
+    double sum = 0;
+    if (join_threads(&sys, n_threads, tids, thread_args, &sum))
+    {
+        printf("join_threads() failed\n");
+        return EXIT_FAILURE;
+    }
+
+    delete_config(&sys);
+    free(thread_args);
+   
+    return sum;
+}
+
 void* routine(void* arg)
 {
     register struct arg_t* bounds = (struct arg_t*)arg;
@@ -86,11 +138,12 @@ static int set_thread_affinity(pthread_attr_t* attr, int cpu_num)
 
 
 static int start_idle_threads(struct sysconfig_t* sys, size_t n_threads, 
-                        pthread_t tids[], struct arg_t args[])
+                        pthread_t tids[], struct arg_t args[],
+                        double left_bound, double right_bound)
 { 
-    double thread_load = (RIGHT_BOUND - LEFT_BOUND) / n_threads;
+    double thread_load = (right_bound - left_bound) / n_threads;
     init_thread_args(args, sys->n_proc_onln, 
-    LEFT_BOUND, LEFT_BOUND + thread_load*sys->n_proc_onln, sys);
+    left_bound, left_bound + thread_load*sys->n_proc_onln, sys);
 
     pthread_attr_t attrs[sys->n_proc_onln];
     for(size_t i = 0; i < sys->n_proc_onln; i++)
@@ -129,13 +182,14 @@ static int start_idle_threads(struct sysconfig_t* sys, size_t n_threads,
 }
 
 static int start_useful_threads(struct sysconfig_t* sys, size_t n_threads, 
-                        pthread_t tids[], struct arg_t args[])
+                        pthread_t tids[], struct arg_t args[],
+                        double left_bound, double right_bound)
 {
     DBG printf("Threads per cpu: %2lu\nextra threads  : %2lu\n",
                 n_threads / sys->n_proc_onln, 
                 n_threads % sys->n_proc_onln);
 
-    init_thread_args(args, n_threads, LEFT_BOUND, RIGHT_BOUND, sys);
+    init_thread_args(args, n_threads, left_bound, right_bound, sys);
 
     int threads_per_cpu[sys->n_proc_onln];
     distribute_threads(threads_per_cpu, n_threads, sys);
@@ -188,12 +242,15 @@ static int start_useful_threads(struct sysconfig_t* sys, size_t n_threads,
 }
 
 int start_threads(struct sysconfig_t* sys, size_t n_threads, 
-                        pthread_t tids[], struct arg_t args[])
+                        pthread_t tids[], struct arg_t args[],
+                        double left_bound, double right_bound)
 {
     if (n_threads <= sys->n_proc_onln)
-        return start_idle_threads(sys, n_threads, tids, args);
+        return start_idle_threads(sys, n_threads, tids, args,
+                                  left_bound, right_bound);
     else
-        return start_useful_threads(sys, n_threads, tids, args);
+        return start_useful_threads(sys, n_threads, tids, args,
+                                  left_bound, right_bound);
 }
 
 
