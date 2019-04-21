@@ -8,12 +8,12 @@ SRC:=src
 OBJ:=obj
 BIN:=bin
 
-COMMON_SOURCES=$(SRC)/multithreading.c $(SRC)/service.c $(SRC)/system.c
+COMMON_SOURCES=$(SRC)/multithreading.c $(SRC)/service.c $(SRC)/system.c $(SRC)/networking.c
 COMMON_HEADERS=$(wildcard $(SRC)/*.h)
 COMMON_OBJECTS=$(patsubst $(SRC)/%.c,$(OBJ)/%.o,$(COMMON_SOURCES))
 
-MASTER=$(BIN)/master
-SLAVE=$(BIN)/slave
+MASTER=$(BIN)/server
+SLAVE=$(BIN)/client
 
 # Specific variables
 debug:		CFLAGS +=-DDEBUG -g
@@ -23,10 +23,10 @@ all: release
 
 debug release:  $(MASTER) $(SLAVE)
 
-$(MASTER): $(SRC)/master.c $(COMMON_OBJECTS) 
+$(MASTER): $(SRC)/server.c $(COMMON_OBJECTS) 
 	$(CC) -o $@ $^ $(LFLAGS)
 
-$(SLAVE): $(SRC)/slave.c $(COMMON_OBJECTS) 
+$(SLAVE): $(SRC)/client.c $(COMMON_OBJECTS) 
 	$(CC) -o $@ $^ $(LFLAGS)
 
 $(OBJ)/%.o: $(SRC)/%.c
