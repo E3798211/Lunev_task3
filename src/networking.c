@@ -380,6 +380,12 @@ int get_client_info(int sock, struct client_info clients[N_CLIENTS_MAX],
                 perror("recv()");
                 return EXIT_FAILURE;
             }
+            else
+            if (received == 0)
+            {
+                printf("Client died after connecting\n");
+                return EXIT_FAILURE;
+            }
 
             clients[n_answered].sock      = new_sock;
             clients[n_answered].n_threads = n_threads;
