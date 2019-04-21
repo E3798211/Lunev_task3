@@ -24,10 +24,10 @@ all: release
 debug release:  $(MASTER) $(SLAVE)
 
 $(MASTER): $(SRC)/server.c $(COMMON_OBJECTS) 
-	$(CC) -o $@ $^ $(LFLAGS)
+	$(CC) $(CFLAGS) -o $@ $^ $(LFLAGS)
 
 $(SLAVE): $(SRC)/client.c $(COMMON_OBJECTS) 
-	$(CC) -o $@ $^ $(LFLAGS)
+	$(CC) $(CFLAGS) -o $@ $^ $(LFLAGS)
 
 $(OBJ)/%.o: $(SRC)/%.c
 	mkdir -p $(BIN) $(OBJ)

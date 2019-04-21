@@ -55,7 +55,8 @@ struct client_info
 #define N_CLIENTS_MAX 16
 #define N_WAITING_RETRIES   4
 #define N_BROADCAST_RETRIES 4
-#define CLIENTS_TIMEOUT { .tv_sec = 0, .tv_usec = 200000 }
+#define CLIENTS_HANDSHAKE_TIMEOUT { .tv_sec = 0, .tv_usec = 200000 }
+#define CLIENTS_INFO_TIMEOUT { .tv_sec = 0, .tv_usec = 200000 }
 
 int init_server();
 /* Expects 'clients' to be zeroed */
@@ -65,6 +66,8 @@ int wait_for_clients_start(int sock,
 /* Returns amount of clients registered */
 int register_client(struct sockaddr_in* client_addr,
                     struct client_info clients[N_CLIENTS_MAX], int n_clients);
+int get_client_info(int sock, struct client_info clients[N_CLIENTS_MAX],
+                    int n_clients);
 
 #endif // NETWORKING_H_INCLUDED
 

@@ -268,7 +268,7 @@ int wait_for_clients_start(int sock,
     int nfds = sock + 1;
     do
     {
-        struct timeval timeout = CLIENTS_TIMEOUT;
+        struct timeval timeout = CLIENTS_HANDSHAKE_TIMEOUT;
         fd_set sock_set;
         FD_ZERO(&sock_set);
         FD_SET (sock, &sock_set);
@@ -331,6 +331,68 @@ int register_client(struct sockaddr_in* client_addr,
     return n_clients;
 }
 
+/*
+    Maybe N_WAITING_RETRIES should be changed to separate value
+ */
+int get_client_info(int sock, struct client_info clients[N_CLIENTS_MAX],
+                    int n_clients)
+{
+    int nfds = sock + 1;
+
+    int n_answered = 0;
+    int retries    = 1;
+    int clients_waiting = 0;
+    do
+    {
+        struct timeval timeout = CLIENTS_INFO_TIMEOUT;
+        fd_set sock_set;
+        FD_ZERO(&sock_set);
+        FD_SET (sock, &sock_set);
+
+        clients_waiting = select(nfds, &sock_set, NULL, NULL, &timeout);
+        if (clients_waiting < 0)
+        {
+            perror("select()");
+            return EXIT_FAILURE;
+        }
+        else
+        if (clients_waiting == 0)
+        {
+            DBG printf("Waiting: %d answered, %d'th wait\n", n_answered,
+                                                             retries);
+            retries++;
+        }
+        else
+        {
+            errno = 0;
+            int new_sock = accept(sock, NULL, NULL);
+            if (new_sock < 0)
+            {
+                perror("accept()");
+                return EXIT_FAILURE;
+            }
+
+            char n_threads = 0;
+            errno = 0;
+            int received = recv(new_sock, &n_threads, sizeof(n_threads), 0);
+            if (received < 0)
+            {
+                perror("recv()");
+                return EXIT_FAILURE;
+            }
+
+            clients[n_answered].sock      = new_sock;
+            clients[n_answered].n_threads = n_threads;
+
+            n_answered++;
+            
+            DBG printf("Connection accepted, %d answered\n", n_answered);
+        }
+
+    }while(n_answered < n_clients && retries < N_WAITING_RETRIES);
+
+    return EXIT_SUCCESS;
+}
 
 
 

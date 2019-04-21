@@ -26,6 +26,7 @@ int main(int argc, char* argv[])
         printf("Handshake failed\n");
         return EXIT_FAILURE;
     }
+    DBG printf("Handshake completed\n");
    
     int main_sock = establish_main_connection(&server_addr);
     if (main_sock < 0)
@@ -33,6 +34,7 @@ int main(int argc, char* argv[])
         printf("establish_main_connection() failed\n");
         return EXIT_FAILURE;
     }
+    DBG printf("Connected to server\n");
 
     res = send_info(main_sock, n_threads);
     if (res)
@@ -40,6 +42,7 @@ int main(int argc, char* argv[])
         printf("send_info() failed\n");
         return EXIT_FAILURE;
     }
+    DBG printf("Info sent\n");
 
     printf("slave\n");
     return 0;
