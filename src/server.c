@@ -1,40 +1,31 @@
-
-#define _GNU_SOURCE
-
-#include <sched.h>
-#include <fcntl.h>
 #include <stdio.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <pthread.h>
-#include <assert.h>
-#include "service.h"
-#include "system.h"
 #include "multithreading.h"
-
-#ifdef DEBUG
-    #define DBG
-#else
-    #define DBG if(0)
-#endif
+#include "networking.h"
 
 int main(int argc, char* argv[])
 {
-    if (argc != 2)
+    int main_sock = init_server();
+    if (main_sock < 0)
     {
-        printf("Usage: %s <n_threads>\n", argv[0]);
-        return EXIT_FAILURE;
-    }
-    
-    size_t n_threads = 0;
-    if (get_positive(argv[1], &n_threads))
-    {
-        printf("Invalid input\n");
+        printf("init_server() failed\n");
         return EXIT_FAILURE;
     }
 
-    double result = integrate(LEFT_BOUND, RIGHT_BOUND, n_threads);
+    struct client_info clients[N_CLIENTS_MAX] = {};
+    int n_clients = find_clients(clients);
+
+    printf("found %d clients\n", n_clients);
+
+
+
+
+
+
+
+
+
+
+    // double result = integrate(LEFT_BOUND, RIGHT_BOUND, n_threads);
     
     return 0;
 }
