@@ -26,10 +26,20 @@ int main(int argc, char* argv[])
         printf("Handshake failed\n");
         return EXIT_FAILURE;
     }
-
    
-    // establish_connection()
+    int main_sock = establish_main_connection(&server_addr);
+    if (main_sock < 0)
+    {
+        printf("establish_main_connection() failed\n");
+        return EXIT_FAILURE;
+    }
 
+    res = send_info(main_sock, n_threads);
+    if (res)
+    {
+        printf("send_info() failed\n");
+        return EXIT_FAILURE;
+    }
 
     printf("slave\n");
     return 0;

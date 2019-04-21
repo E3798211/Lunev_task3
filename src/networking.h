@@ -22,7 +22,8 @@
 
 // Common
 
-#define PORT 3000
+#define HANDSHAKE_PORT  3000
+#define MAIN_PORT       3001
 
 /* Expects UDP socket */
 int send_address(int sock, struct sockaddr_in* sddr, int n_times);
@@ -37,6 +38,7 @@ int find_server(struct sockaddr_in* server_addr);
 int notify_server(int server, struct sockaddr_in* server_addr);
 int server_handshake(struct sockaddr_in* server_addr);
 int establish_main_connection(struct sockaddr_in* server_addr);
+int send_info(int server, size_t n_threads);
 
 // Server
 
@@ -53,7 +55,7 @@ struct client_info
 #define N_CLIENTS_MAX 16
 #define N_WAITING_RETRIES   4
 #define N_BROADCAST_RETRIES 4
-#define CLIENTS_TIMEOUT { .tv_sec = 0, .tv_usec = 5000 }
+#define CLIENTS_TIMEOUT { .tv_sec = 0, .tv_usec = 200000 }
 
 int init_server();
 /* Expects 'clients' to be zeroed */

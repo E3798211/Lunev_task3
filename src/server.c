@@ -17,7 +17,7 @@ int main(int argc, char* argv[])
     printf("found %d clients\n", n_clients);
 
 
-
+    getchar();
 
 
 

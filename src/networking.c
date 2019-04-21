@@ -45,7 +45,7 @@ int find_server(struct sockaddr_in* server_addr)
 
     struct sockaddr_in bcast_addr;
     bcast_addr.sin_family = AF_INET;
-    bcast_addr.sin_port   = htons(PORT);
+    bcast_addr.sin_port   = htons(HANDSHAKE_PORT);
     bcast_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
     errno = 0;
@@ -136,6 +136,8 @@ int establish_main_connection(struct sockaddr_in* server_addr)
         return -1;
     }
 
+    server_addr->sin_port = htons(MAIN_PORT);
+
     errno = 0;
     int res = connect(main_sock, (struct sockaddr*)server_addr, 
                       sizeof(*server_addr));
@@ -147,6 +149,21 @@ int establish_main_connection(struct sockaddr_in* server_addr)
 
     return main_sock;
 }
+
+int send_info(int server, size_t n_threads)
+{
+    char n_threads_shortened = (char)n_threads;
+
+    errno = 0;
+    int res = send(server, &n_threads_shortened, sizeof(n_threads_shortened),0);
+    if (res < 0)
+    {
+        perror("send()");
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
+}
+
 
 // Server
 
@@ -162,8 +179,8 @@ int init_server()
 
     struct sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
-    server_addr.sin_port   = htons(PORT);
-    server_addr.sin_addr.s_addr = 0;
+    server_addr.sin_port   = htons(MAIN_PORT);
+    server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
     errno = 0;
     int res = bind(main_socket, (struct sockaddr*)&server_addr, 
@@ -210,7 +227,7 @@ int find_clients(struct client_info clients[N_CLIENTS_MAX])
 
     struct sockaddr_in bcast_addr;
     bcast_addr.sin_family = AF_INET;
-    bcast_addr.sin_port   = htons(PORT);
+    bcast_addr.sin_port   = htons(HANDSHAKE_PORT);
     inet_pton(AF_INET, "255.255.255.255", &(bcast_addr.sin_addr));
 
 
@@ -236,6 +253,7 @@ int find_clients(struct client_info clients[N_CLIENTS_MAX])
         }
     }while(!n_clients && retries++ < N_WAITING_RETRIES);
 
+    close(bcast);
     return n_clients;
 }
 
@@ -295,7 +313,8 @@ int register_client(struct sockaddr_in* client_addr,
     {
         if (clients[i].addr == client_addr->sin_addr.s_addr)
         {
-            DBG printf("Client %s repeated\n", inet_ntoa(client_addr->sin_addr));
+            DBG printf("Client %s repeated\n", 
+                       inet_ntoa(client_addr->sin_addr));
             return n_clients;
         }
         else        // Empty cell
