@@ -42,6 +42,8 @@ int find_server(struct sockaddr_in* server_addr)
         return -1;
     }
 
+    DBG printf("Server address: %s\n", inet_ntoa(server_addr->sin_addr));
+
     return server;
 }
 
@@ -77,7 +79,51 @@ int notify_server(int server, struct sockaddr_in* server_addr)
     return EXIT_SUCCESS;
 }
 
+int server_handshake(struct sockaddr_in* server_addr)
+{
+    assert(server_addr);
+ 
+    int server = find_server(server_addr);
+    if (server_addr < 0)
+    {
+        printf("Server not found\n");
+        return EXIT_FAILURE;
+    }
 
+    int res = notify_server(server, server_addr);
+    if (res < 0)
+    {
+        printf("Failed to notify server\n");
+        return EXIT_FAILURE;
+    }
+
+    close(server);
+
+    return EXIT_SUCCESS;
+}
+
+int establish_main_connection(struct sockaddr_in* server_addr)
+{
+    assert(server_addr);
+
+    errno = 0;
+    int main_sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (main_sock < 0)
+    {
+        perror("socket()");
+        return -1;
+    }
+
+    errno = 0;
+    int res = connect(main_sock, (struct sockaddr*)server_addr, sizeof(*server_addr));
+    if (res)
+    {
+        perror("connect()");
+        return -1;
+    }
+
+    return main_sock;
+}
 
 
 
