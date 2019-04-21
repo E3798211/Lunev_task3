@@ -15,18 +15,6 @@ int find_server(struct sockaddr_in* server_addr)
         return -1;
     }
 
-//
-    int optval = 1;
-    errno = 0;
-    res = setsockopt(server, SOL_SOCKET, SO_BROADCAST, &optval, sizeof(optval));
-    if (res)
-    {
-        perror("setsockopt()");
-        close(server);
-        return -1;
-    }
-//
-
     struct sockaddr_in bcast_addr;
     bcast_addr.sin_family = AF_INET;
     bcast_addr.sin_port   = htons(PORT);
@@ -56,5 +44,49 @@ int find_server(struct sockaddr_in* server_addr)
 
     return server;
 }
+
+
+int notify_server(int server, struct sockaddr_in* server_addr)
+{
+    assert(server_addr);
+    
+    int res;
+
+    int optval = 1;
+    errno = 0;
+    res = setsockopt(server, SOL_SOCKET, SO_BROADCAST, &optval, sizeof(optval));
+    if (res)
+    {
+        perror("setsockopt()");
+        return -1;
+    }
+
+    char msg = '1';
+    for(int i = 0; i < N_NOTIFY_RETRIES; i++)
+    {
+        errno = 0;
+        res = sendto(server, &msg, sizeof(msg), 0,
+                     (struct sockaddr*)server_addr, sizeof(*server_addr));
+        if (res < 0)
+        {
+            perror("sendto()");
+            return EXIT_FAILURE;
+        }
+    }
+
+    return EXIT_SUCCESS;
+}
+
+
+
+
+
+
+
+
+
+
+
+
 
 

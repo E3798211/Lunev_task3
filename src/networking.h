@@ -15,7 +15,11 @@
 
 // Client
 
+#define N_NOTIFY_RETRIES 4
+
+/* Opens fd */
 int find_server(struct sockaddr_in* server_addr);
+int notify_server(int server, struct sockaddr_in* server_addr);
 
 #endif // NETWORKING_H_INCLUDED
 
