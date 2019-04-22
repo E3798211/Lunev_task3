@@ -12,6 +12,7 @@
 #include <sys/types.h>
 #include <arpa/inet.h>
 #include <sys/time.h>
+#include "multithreading.h"
 
 #ifdef  DEBUG
     #define DBG
@@ -38,12 +39,12 @@ ssize_t recv_msg(int sock, void* buf, size_t buf_size);
 #define N_NOTIFY_RETRIES 4
 
 /* Opens fd */
-int find_server(struct sockaddr_in* server_addr);
-int notify_server(int server, struct sockaddr_in* server_addr);
+int find_server    (struct sockaddr_in* server_addr);
+int notify_server  (int server, struct sockaddr_in* server_addr);
 int server_handshake(struct sockaddr_in* server_addr);
 int establish_main_connection(struct sockaddr_in* server_addr);
-int send_info(int server, size_t n_threads);
-int receive_bound(int server, double* bound);
+int send_info      (int server, size_t n_threads);
+int receive_bound  (int server, double* bound);
 
 // Server
 
@@ -67,7 +68,7 @@ struct client_info
 
 int init_server();
 /* Expects 'clients' to be zeroed */
-int find_clients(struct client_info clients[N_CLIENTS_MAX]);
+int find_clients   (struct client_info clients[N_CLIENTS_MAX]);
 int wait_for_clients_start(int sock, 
                            struct client_info clients[N_CLIENTS_MAX]);
 /* Returns amount of clients registered */
@@ -75,7 +76,8 @@ int register_client(struct sockaddr_in* client_addr,
                     struct client_info clients[N_CLIENTS_MAX], int n_clients);
 int get_client_info(int sock, struct client_info clients[N_CLIENTS_MAX],
                     int n_clients);
-int start_clients(struct client_info clients[N_CLIENTS_MAX], int n_clients);
+int start_clients  (struct client_info clients[N_CLIENTS_MAX], int n_clients);
+void distribute_load(struct client_info clients[N_CLIENTS_MAX], int n_clients);
 
 #endif // NETWORKING_H_INCLUDED
 

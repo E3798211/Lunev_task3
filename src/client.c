@@ -61,8 +61,8 @@ int main(int argc, char* argv[])
 
 
 // TEMPORARY
-    left_bound = -1;
-    right_bound = 1;
+//    left_bound = -1;
+//    right_bound = 1;
 
 
     double sum = integrate(left_bound, right_bound, n_threads);

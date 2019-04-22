@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
     // No-one will connect
     close(main_sock);
 
-//  distribute_load()
+    distribute_load(clients, n_clients);
 
     res = start_clients(clients, n_clients);
     if (res)
