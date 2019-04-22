@@ -207,14 +207,25 @@ int init_server()
         return -1;
     }
 
+    int yes = 1;
+    errno = 0;
+    int res = setsockopt(main_socket, SOL_SOCKET, SO_REUSEADDR, 
+                                      &yes, sizeof(yes));
+    if (res)
+    {
+        perror("setsockopt()");
+        return -1;
+    }
+
+
     struct sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
     server_addr.sin_port   = htons(MAIN_PORT);
     server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
     errno = 0;
-    int res = bind(main_socket, (struct sockaddr*)&server_addr, 
-                   sizeof(server_addr));
+    res = bind(main_socket, (struct sockaddr*)&server_addr, 
+               sizeof(server_addr));
     if (res)
     {
         perror("bind()");

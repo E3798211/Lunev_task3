@@ -44,6 +44,11 @@ int main(int argc, char* argv[])
     }
     DBG printf("All clients connected, info gathered\n");
 
+    double x = 123;
+    send(clients[0].sock, &x, 8, 0);
+    send(clients[0].sock, &x, 8, 0);
+    send(clients[1].sock, &x, 8, 0);
+    send(clients[1].sock, &x, 8, 0);
 
 
     // double result = integrate(LEFT_BOUND, RIGHT_BOUND, n_threads);
