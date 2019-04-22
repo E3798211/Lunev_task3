@@ -27,6 +27,32 @@ int send_address(int sock, struct sockaddr_in* addr, int n_times)
     return EXIT_SUCCESS;
 }
 
+ssize_t send_msg(int sock, void* msg, size_t msg_size)
+{
+    
+}
+
+ssize_t recv_msg(int sock, void* buf, size_t msg_size)
+{
+    ssize_t bytes_read_all = 0;
+    ssize_t bytes_read;
+    do
+    {
+        errno = 0;
+        bytes_read = recv(sock, (char*)buf + bytes_read_all, 
+                                  msg_size - bytes_read_all, 0);
+        if (read < 0)
+        {
+            perror("recv()");
+            return -1;
+        }
+        bytes_read_all += bytes_read;
+    }while(bytes_read && bytes_read_all < msg_size);
+    
+    return bytes_read_all;
+}
+
+
 // Client
 
 int find_server(struct sockaddr_in* server_addr)
@@ -166,31 +192,18 @@ int send_info(int server, size_t n_threads)
 
 int receive_bound(int server, double* bound)
 {
-    union {
-        double bound;
-        char   bound_decomposed[sizeof(double)];
-    } received_data;
-
-    int bytes_read = 0;
-    while(bytes_read < sizeof(double))
+    ssize_t msg_size = recv_msg(server, bound, sizeof(double));
+    if (msg_size < 0)
     {
-        errno = 0;
-        int read = recv(server, &received_data.bound_decomposed[bytes_read],
-                                sizeof(double) - bytes_read, 0);
-        if (read < 0)
-        {
-            perror("recv()");
-            return EXIT_FAILURE;
-        }
-        else
-        if (read == 0)
-        {
-            printf("Server's dead\n");
-            return EXIT_FAILURE;
-        }
-        bytes_read += read;
+        printf("recv_msg() failed\n");
+        return EXIT_FAILURE;
     }
-    *bound = received_data.bound;
+    else
+    if (msg_size < sizeof(double))
+    {
+        printf("Received %zd bytes - assuming server dead.\n", msg_size);
+        return EXIT_FAILURE;
+    }
 
     return EXIT_SUCCESS;
 }
@@ -443,6 +456,10 @@ int get_client_info(int sock, struct client_info clients[N_CLIENTS_MAX],
     return n_answered;
 }
 
+int start_clients(struct client_info clients[N_CLIENTS_MAX], int n_clients)
+{
+    
+}
 
 
 

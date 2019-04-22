@@ -27,6 +27,11 @@
 
 /* Expects UDP socket */
 int send_address(int sock, struct sockaddr_in* sddr, int n_times);
+/* 'sock' expected to be TCP and already connected 
+    Functions return amount of bytes read
+ */
+ssize_t send_msg(int sock, void* msg, size_t msg_size);
+ssize_t recv_msg(int sock, void* buf, size_t buf_size);
 
 
 // Client
@@ -48,6 +53,8 @@ struct client_info
     int sock;
     int n_threads;
     uint32_t addr;
+    double left_bound;
+    double right_bound;
 #ifdef    DEBUG
     char ip[16];
 #endif // DEBUG
@@ -69,6 +76,7 @@ int register_client(struct sockaddr_in* client_addr,
                     struct client_info clients[N_CLIENTS_MAX], int n_clients);
 int get_client_info(int sock, struct client_info clients[N_CLIENTS_MAX],
                     int n_clients);
+int start_clients(struct client_info clients[N_CLIENTS_MAX], int n_clients);
 
 #endif // NETWORKING_H_INCLUDED
 

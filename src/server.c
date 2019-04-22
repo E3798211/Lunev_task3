@@ -44,9 +44,12 @@ int main(int argc, char* argv[])
     }
     DBG printf("All clients connected, info gathered\n");
 
+    // No-one will connect
+    close(main_sock);
+
     double x = 123;
-    send(clients[0].sock, &x, 8, 0);
-    send(clients[0].sock, &x, 8, 0);
+    send(clients[0].sock, &x, 7, 0);
+    //send(clients[0].sock, &x, 8, 0);
     send(clients[1].sock, &x, 8, 0);
     send(clients[1].sock, &x, 8, 0);
 
