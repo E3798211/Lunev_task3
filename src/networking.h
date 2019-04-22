@@ -12,6 +12,8 @@
 #include <sys/types.h>
 #include <arpa/inet.h>
 #include <sys/time.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 #include "multithreading.h"
 
 #ifdef  DEBUG
@@ -79,9 +81,15 @@ int register_client(struct sockaddr_in* client_addr,
                     struct client_info clients[N_CLIENTS_MAX], int n_clients);
 int get_client_info(int sock, struct client_info clients[N_CLIENTS_MAX],
                     int n_clients);
+void distribute_load(struct client_info clients[N_CLIENTS_MAX], int n_clients,
+                     double left_bound, double right_bound);
 int start_clients  (struct client_info clients[N_CLIENTS_MAX], int n_clients);
-void distribute_load(struct client_info clients[N_CLIENTS_MAX], int n_clients);
+int set_client_connections(struct client_info clients[N_CLIENTS_MAX],
+                    int n_clients);
 int wait_for_clients_finish(struct client_info clients[N_CLIENTS_MAX],
+                    int n_clients);
+double collect_info(struct client_info clients[N_CLIENTS_MAX], int n_clients);
+void close_connections(struct client_info clients[N_CLIENTS_MAX],
                     int n_clients);
 
 #endif // NETWORKING_H_INCLUDED

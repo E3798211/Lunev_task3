@@ -500,14 +500,71 @@ int start_clients(struct client_info clients[N_CLIENTS_MAX], int n_clients)
     return EXIT_SUCCESS;
 }
 
-void distribute_load(struct client_info clients[N_CLIENTS_MAX], int n_clients)
+int set_client_connections(struct client_info clients[N_CLIENTS_MAX],
+                    int n_clients)
+{
+#define SOCK(i) clients[(i)].sock
+    int res = 0;
+    for(int i = 0; i < n_clients; i++)
+    {
+        int option = 1;
+        errno = 0;
+        res = setsockopt(SOCK(i), SOL_SOCKET, SO_KEEPALIVE,
+                         &option, sizeof(option));
+        if (res)
+        {
+            perror("setsockopt()");
+            printf("SO_KEEPALIVE failed\n");
+            return EXIT_FAILURE;
+        }
+        
+        option = 10;    // 10 sec until assuming connection dead
+        errno = 0;
+        res = setsockopt(SOCK(i), IPPROTO_TCP, TCP_KEEPIDLE, 
+                         &option, sizeof(option));
+        if (res)
+        {
+            perror("setsockopt()");
+            printf("TCP_KEEPIDLE failed\n");
+            return EXIT_FAILURE;
+        }
+
+        option = 5;     // 5 packets
+        errno = 0;
+        res = setsockopt(SOCK(i), IPPROTO_TCP, TCP_KEEPCNT, 
+                         &option, sizeof(option));
+        if (res)
+        {
+            perror("setsockopt()");
+            printf("TCP_KEEPCNT failed\n");
+            return EXIT_FAILURE;
+        }
+
+        option = 1;     // 1 sec between packets
+        errno = 0;
+        res = setsockopt(SOCK(i), IPPROTO_TCP, TCP_KEEPINTVL, 
+                         &option, sizeof(option));
+        if (res)
+        {
+            perror("setsockopt()");
+            printf("TCP_KEEPINTVL failed\n");
+            return EXIT_FAILURE;
+        }
+    }
+#undef SOCK
+
+    return EXIT_SUCCESS;
+}
+
+void distribute_load(struct client_info clients[N_CLIENTS_MAX], int n_clients,
+                     double left_bound, double right_bound)
 {
     int n_threads_all = 0;
     for(int i = 0; i < n_clients; i++)
         n_threads_all += clients[i].n_threads;
     DBG printf("Threads amount: %d\n", n_threads_all);
 
-    double load_per_thread = (RIGHT_BOUND - LEFT_BOUND)/n_threads_all;
+    double load_per_thread = (right_bound - left_bound)/n_threads_all;
 
     double current = LEFT_BOUND;
     for(int i = 0; i < n_clients; i++)
@@ -624,12 +681,20 @@ int wait_for_clients_finish(struct client_info clients[N_CLIENTS_MAX],
 }
 
 
+double collect_info(struct client_info clients[N_CLIENTS_MAX], int n_clients)
+{
+    double sum = 0;
+    for(int i = 0; i < n_clients; i++)
+        sum += clients[i].result;
+    return sum;
+}
 
-
-
-
-
-
+void close_connections(struct client_info clients[N_CLIENTS_MAX],
+                    int n_clients)
+{
+    for(int i = 0; i < n_clients; i++)
+        close(clients[i].sock);
+}
 
 
 

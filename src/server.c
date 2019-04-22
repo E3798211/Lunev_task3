@@ -47,12 +47,19 @@ int main(int argc, char* argv[])
     // No-one will connect
     close(main_sock);
 
-    distribute_load(clients, n_clients);
+    distribute_load(clients, n_clients, LEFT_BOUND, RIGHT_BOUND);
 
     res = start_clients(clients, n_clients);
     if (res)
     {
         printf("start_clients() failed\n");
+        return EXIT_FAILURE;
+    }
+
+    res = set_client_connections(clients, n_clients);
+    if (res)
+    {
+        printf("set_client_connections() failed\n");
         return EXIT_FAILURE;
     }
 
@@ -64,9 +71,8 @@ int main(int argc, char* argv[])
         return EXIT_FAILURE;
     }
 
-    double sum = 0;
-    for(int i = 0; i < n_clients; i++)
-        sum += clients[i].result;
+    double sum = collect_info(clients, n_clients);
+    close_connections(clients, n_clients);
    
     printf("\n\n%lg\n", sum);
 
