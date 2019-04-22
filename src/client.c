@@ -59,7 +59,23 @@ int main(int argc, char* argv[])
     }
     DBG printf("Left =  %lg; Right = %lg\n", left_bound, right_bound);
 
-    printf("slave\n");
+
+// TEMPORARY
+    left_bound = -1;
+    right_bound = 1;
+
+
+    double sum = integrate(left_bound, right_bound, n_threads);
+
+    res = send_msg(main_sock, &sum, sizeof(sum));
+    if (res < 0)
+    {
+        printf("send_msg() failed\n");
+        return EXIT_FAILURE;
+    }
+    DBG printf("Result sent\n");
+
+    DBG printf("Client quit\n");
     return 0;
 }
 

@@ -33,7 +33,7 @@ double integrate(double left_bound, double right_bound, size_t n_threads)
 
     DBG printf("Starting threads\n");
     if (start_threads(&sys, n_threads, tids, thread_args, 
-                      LEFT_BOUND, RIGHT_BOUND))
+                      left_bound, right_bound))
     {
         printf("start_threads() failed\n");
         return EXIT_FAILURE;
