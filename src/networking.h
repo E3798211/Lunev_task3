@@ -30,8 +30,8 @@
 int send_address(int sock, struct sockaddr_in* sddr, int n_times);
 /* 'sock' expected to be TCP and already connected 
     Functions return amount of bytes read          */
-ssize_t send_msg(int sock, void* msg, size_t msg_size);
-ssize_t recv_msg(int sock, void* buf, size_t buf_size);
+ssize_t send_msg(int sock, void* msg, size_t msg_size, int flags);
+ssize_t recv_msg(int sock, void* buf, size_t buf_size, int flags);
 
 
 // Client
@@ -53,8 +53,10 @@ struct client_info
     int sock;
     int n_threads;
     uint32_t addr;
+    int finished;
     double left_bound;
     double right_bound;
+    double result;
 #ifdef    DEBUG
     char ip[16];
 #endif // DEBUG
@@ -65,6 +67,7 @@ struct client_info
 #define N_BROADCAST_RETRIES 4
 #define CLIENTS_HANDSHAKE_TIMEOUT { .tv_sec = 0, .tv_usec = 200000 }
 #define CLIENTS_INFO_TIMEOUT      { .tv_sec = 0, .tv_usec = 200000 }
+#define CLIENTS_PING_TIMEOUT      { .tv_sec = 5, .tv_usec =      0 }
 
 int init_server();
 /* Expects 'clients' to be zeroed */
@@ -78,6 +81,8 @@ int get_client_info(int sock, struct client_info clients[N_CLIENTS_MAX],
                     int n_clients);
 int start_clients  (struct client_info clients[N_CLIENTS_MAX], int n_clients);
 void distribute_load(struct client_info clients[N_CLIENTS_MAX], int n_clients);
+int wait_for_clients_finish(struct client_info clients[N_CLIENTS_MAX],
+                    int n_clients);
 
 #endif // NETWORKING_H_INCLUDED
 

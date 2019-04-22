@@ -67,7 +67,7 @@ int main(int argc, char* argv[])
 
     double sum = integrate(left_bound, right_bound, n_threads);
 
-    res = send_msg(main_sock, &sum, sizeof(sum));
+    res = send_msg(main_sock, &sum, sizeof(sum), 0);
     if (res < 0)
     {
         printf("send_msg() failed\n");

@@ -56,8 +56,20 @@ int main(int argc, char* argv[])
         return EXIT_FAILURE;
     }
 
-    // double result = integrate(LEFT_BOUND, RIGHT_BOUND, n_threads);
-    
+    res = wait_for_clients_finish(clients, n_clients);
+    if (res)
+    {
+        printf("wait_for_clients_finish() failed\n");
+        close(main_sock);
+        return EXIT_FAILURE;
+    }
+
+    double sum = 0;
+    for(int i = 0; i < n_clients; i++)
+        sum += clients[i].result;
+   
+    printf("\n\n%lg\n", sum);
+
     return 0;
 }
 

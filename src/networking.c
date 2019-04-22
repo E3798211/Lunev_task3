@@ -27,7 +27,7 @@ int send_address(int sock, struct sockaddr_in* addr, int n_times)
     return EXIT_SUCCESS;
 }
 
-ssize_t send_msg(int sock, void* msg, size_t msg_size)
+ssize_t send_msg(int sock, void* msg, size_t msg_size, int flags)
 {
     ssize_t bytes_sent_all = 0;
     ssize_t bytes_sent;
@@ -35,7 +35,7 @@ ssize_t send_msg(int sock, void* msg, size_t msg_size)
     {
         errno = 0;
         bytes_sent = send(sock, (char*)msg + bytes_sent_all,
-                                  msg_size - bytes_sent_all, 0);
+                                  msg_size - bytes_sent_all, flags);
         if (bytes_sent < 0)
         {
             perror("send()");
@@ -47,7 +47,7 @@ ssize_t send_msg(int sock, void* msg, size_t msg_size)
     return bytes_sent_all;
 }
 
-ssize_t recv_msg(int sock, void* buf, size_t msg_size)
+ssize_t recv_msg(int sock, void* buf, size_t msg_size, int flags)
 {
     ssize_t bytes_read_all = 0;
     ssize_t bytes_read;
@@ -55,7 +55,7 @@ ssize_t recv_msg(int sock, void* buf, size_t msg_size)
     {
         errno = 0;
         bytes_read = recv(sock, (char*)buf + bytes_read_all, 
-                                  msg_size - bytes_read_all, 0);
+                                  msg_size - bytes_read_all, flags);
         if (bytes_read < 0)
         {
             perror("recv()");
@@ -207,7 +207,7 @@ int send_info(int server, size_t n_threads)
 
 int receive_bound(int server, double* bound)
 {
-    ssize_t msg_size = recv_msg(server, bound, sizeof(double));
+    ssize_t msg_size = recv_msg(server, bound, sizeof(double), 0);
     if (msg_size < 0)
     {
         printf("recv_msg() failed\n");
@@ -482,7 +482,7 @@ int start_clients(struct client_info clients[N_CLIENTS_MAX], int n_clients)
                              clients[i].right_bound };
         for(int k = 0; k < 2; k++)
         {
-            res = send_msg(clients[i].sock, &bounds[k], size);
+            res = send_msg(clients[i].sock, &bounds[k], size, 0);
             if (res < 0)
             {
                 printf("send_msg() failed\n");
@@ -518,6 +518,110 @@ void distribute_load(struct client_info clients[N_CLIENTS_MAX], int n_clients)
     }
 }
 
+
+
+static int  max_fds(struct client_info clients[N_CLIENTS_MAX],
+                    int n_clients)
+{
+    int nfds = -1;
+    for(int i = 0; i < n_clients; i++)
+        if (!clients[i].finished && clients[i].sock > nfds) 
+            nfds = clients[i].sock;
+    return nfds;
+}
+
+static void fill_fd_set(struct client_info clients[N_CLIENTS_MAX], 
+                        int n_clients, fd_set* set)
+{
+    for(int i = 0; i < n_clients; i++)
+        if (!clients[i].finished)
+            FD_SET(clients[i].sock, set);
+}
+
+/* Returns if any client is dead */
+static int gather_results(struct client_info clients[N_CLIENTS_MAX],
+                          int n_clients, fd_set* set)
+{
+    for(int i = 0; i < n_clients; i++)
+    {
+        if (FD_ISSET(clients[i].sock, set))
+        {
+            clients[i].finished  = 1;
+
+            double client_result = 0;
+            int res = recv_msg(clients[i].sock, &client_result,
+                               sizeof(client_result), 0);
+            if (res < 0)
+            {
+                printf("recv_msg() failed\n");
+                return -1;   
+            }
+            else
+            if (res == 0)
+            {
+                return 1;   // Assuming client dead
+            }
+            else
+            if (res < sizeof(client_result))
+            {
+                printf("recv_msg() failed to recieve whole message.\n");
+                return -1;
+            }
+            
+            clients[i].result = client_result;
+        }
+    }
+
+    return 0;
+}
+
+int wait_for_clients_finish(struct client_info clients[N_CLIENTS_MAX],
+                            int n_clients)
+{
+    int clients_waiting = 0;
+    while(1)
+    {
+        int max = max_fds(clients, n_clients);
+        if (max < 0)        break;  // No clients left
+        
+        int nfds = max + 1;
+        struct timeval timeout = CLIENTS_PING_TIMEOUT;
+
+        fd_set clients_socks;
+        FD_ZERO(&clients_socks);
+        fill_fd_set(clients, n_clients, &clients_socks);
+
+        errno = 0;
+        clients_waiting = select(nfds, &clients_socks, NULL, NULL, &timeout);
+        if (clients_waiting <  0)
+        {
+            perror("select()");
+            return EXIT_FAILURE;
+        }
+        if (clients_waiting == 0)
+        {
+            DBG printf("Continuing poll, all alive\n");
+        }
+        else
+        {
+            int client_dead = gather_results(clients, n_clients, 
+                                             &clients_socks);
+            if (client_dead < 0)
+            {
+                printf("gather_results() failed\n");
+                return EXIT_FAILURE;
+            }
+            else
+            if (client_dead)
+            {
+                printf("Client is dead\n");
+                return EXIT_FAILURE;
+            }
+        }
+    }
+
+    return EXIT_SUCCESS;
+}
 
 
 
