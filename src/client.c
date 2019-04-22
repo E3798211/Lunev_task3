@@ -44,6 +44,21 @@ int main(int argc, char* argv[])
     }
     DBG printf("Info sent\n");
 
+    double left_bound, right_bound;
+    res = receive_bound(main_sock, &left_bound);
+    if (res)
+    {
+        printf("receive_bound() [left ] failed\n");
+        return EXIT_FAILURE;
+    }
+    res = receive_bound(main_sock, &right_bound);
+    if (res)
+    {
+        printf("receive_bound() [right] failed\n");
+        return EXIT_FAILURE;
+    }
+    DBG printf("Left =  %lg; Right = %lg\n", left_bound, right_bound);
+
     printf("slave\n");
     return 0;
 }

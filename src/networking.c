@@ -164,6 +164,36 @@ int send_info(int server, size_t n_threads)
     return EXIT_SUCCESS;
 }
 
+int receive_bound(int server, double* bound)
+{
+    union {
+        double bound;
+        char   bound_decomposed[sizeof(double)];
+    } received_data;
+
+    int bytes_read = 0;
+    while(bytes_read < sizeof(double))
+    {
+        errno = 0;
+        int read = recv(server, &received_data.bound_decomposed[bytes_read],
+                                sizeof(double) - bytes_read, 0);
+        if (read < 0)
+        {
+            perror("recv()");
+            return EXIT_FAILURE;
+        }
+        else
+        if (read == 0)
+        {
+            printf("Server's dead\n");
+            return EXIT_FAILURE;
+        }
+        bytes_read += read;
+    }
+    *bound = received_data.bound;
+
+    return EXIT_SUCCESS;
+}
 
 // Server
 

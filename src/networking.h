@@ -39,6 +39,7 @@ int notify_server(int server, struct sockaddr_in* server_addr);
 int server_handshake(struct sockaddr_in* server_addr);
 int establish_main_connection(struct sockaddr_in* server_addr);
 int send_info(int server, size_t n_threads);
+int receive_bound(int server, double* bound);
 
 // Server
 

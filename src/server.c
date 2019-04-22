@@ -46,8 +46,6 @@ int main(int argc, char* argv[])
 
 
 
-
-
     // double result = integrate(LEFT_BOUND, RIGHT_BOUND, n_threads);
     
     return 0;
