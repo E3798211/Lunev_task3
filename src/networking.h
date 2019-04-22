@@ -28,8 +28,7 @@
 /* Expects UDP socket */
 int send_address(int sock, struct sockaddr_in* sddr, int n_times);
 /* 'sock' expected to be TCP and already connected 
-    Functions return amount of bytes read
- */
+    Functions return amount of bytes read          */
 ssize_t send_msg(int sock, void* msg, size_t msg_size);
 ssize_t recv_msg(int sock, void* buf, size_t buf_size);
 

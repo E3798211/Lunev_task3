@@ -47,12 +47,14 @@ int main(int argc, char* argv[])
     // No-one will connect
     close(main_sock);
 
-    double x = 123;
-    send(clients[0].sock, &x, 7, 0);
-    //send(clients[0].sock, &x, 8, 0);
-    send(clients[1].sock, &x, 8, 0);
-    send(clients[1].sock, &x, 8, 0);
+//  distribute_load()
 
+    res = start_clients(clients, n_clients);
+    if (res)
+    {
+        printf("start_clients() failed\n");
+        return EXIT_FAILURE;
+    }
 
     // double result = integrate(LEFT_BOUND, RIGHT_BOUND, n_threads);
     

@@ -29,7 +29,22 @@ int send_address(int sock, struct sockaddr_in* addr, int n_times)
 
 ssize_t send_msg(int sock, void* msg, size_t msg_size)
 {
-    
+    ssize_t bytes_sent_all = 0;
+    ssize_t bytes_sent;
+    do
+    {
+        errno = 0;
+        bytes_sent = send(sock, (char*)msg + bytes_sent_all,
+                                  msg_size - bytes_sent_all, 0);
+        if (bytes_sent < 0)
+        {
+            perror("send()");
+            return -1;
+        }
+        bytes_sent_all += bytes_sent;
+    }while(bytes_sent && bytes_sent_all < msg_size);
+
+    return bytes_sent_all;
 }
 
 ssize_t recv_msg(int sock, void* buf, size_t msg_size)
@@ -41,7 +56,7 @@ ssize_t recv_msg(int sock, void* buf, size_t msg_size)
         errno = 0;
         bytes_read = recv(sock, (char*)buf + bytes_read_all, 
                                   msg_size - bytes_read_all, 0);
-        if (read < 0)
+        if (bytes_read < 0)
         {
             perror("recv()");
             return -1;
@@ -458,7 +473,31 @@ int get_client_info(int sock, struct client_info clients[N_CLIENTS_MAX],
 
 int start_clients(struct client_info clients[N_CLIENTS_MAX], int n_clients)
 {
-    
+    int res;
+    size_t size = sizeof(clients[0].left_bound);
+
+    for(int i = 0; i < n_clients; i++)
+    {
+        double bounds[2] = { clients[i]. left_bound,
+                             clients[i].right_bound };
+        for(int k = 0; k < 2; k++)
+        {
+            res = send_msg(clients[i].sock, &bounds[k], size);
+            if (res < 0)
+            {
+                printf("send_msg() failed\n");
+                return EXIT_FAILURE;
+            }
+            else
+            if (res < size)
+            {
+                printf("send_msg() sent %d bytes of %lu\n", res, size);
+                return EXIT_FAILURE;
+            }
+        }
+    }
+
+    return EXIT_SUCCESS;
 }
 
 
