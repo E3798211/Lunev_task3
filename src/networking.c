@@ -315,9 +315,11 @@ int register_client(struct sockaddr_in* client_addr,
         {
             DBG printf("Client %s repeated\n", 
                        inet_ntoa(client_addr->sin_addr));
+
             return n_clients;
         }
-        else        // Empty cell
+        else
+        if (clients[i].addr == 0)
         {
             DBG printf("Client %s new\n", inet_ntoa(client_addr->sin_addr));
             clients[i].addr = client_addr->sin_addr.s_addr;
@@ -353,7 +355,7 @@ int get_client_info(int sock, struct client_info clients[N_CLIENTS_MAX],
         if (clients_waiting < 0)
         {
             perror("select()");
-            return EXIT_FAILURE;
+            return -1;
         }
         else
         if (clients_waiting == 0)
@@ -369,7 +371,7 @@ int get_client_info(int sock, struct client_info clients[N_CLIENTS_MAX],
             if (new_sock < 0)
             {
                 perror("accept()");
-                return EXIT_FAILURE;
+                return -1;
             }
 
             char n_threads = 0;
@@ -378,13 +380,13 @@ int get_client_info(int sock, struct client_info clients[N_CLIENTS_MAX],
             if (received < 0)
             {
                 perror("recv()");
-                return EXIT_FAILURE;
+                return -1;
             }
             else
             if (received == 0)
             {
                 printf("Client died after connecting\n");
-                return EXIT_FAILURE;
+                return -1;
             }
 
             clients[n_answered].sock      = new_sock;
@@ -397,7 +399,7 @@ int get_client_info(int sock, struct client_info clients[N_CLIENTS_MAX],
 
     }while(n_answered < n_clients && retries < N_WAITING_RETRIES);
 
-    return EXIT_SUCCESS;
+    return n_answered;
 }
 
 

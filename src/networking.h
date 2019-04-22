@@ -56,7 +56,7 @@ struct client_info
 #define N_WAITING_RETRIES   4
 #define N_BROADCAST_RETRIES 4
 #define CLIENTS_HANDSHAKE_TIMEOUT { .tv_sec = 0, .tv_usec = 200000 }
-#define CLIENTS_INFO_TIMEOUT { .tv_sec = 0, .tv_usec = 200000 }
+#define CLIENTS_INFO_TIMEOUT      { .tv_sec = 0, .tv_usec = 200000 }
 
 int init_server();
 /* Expects 'clients' to be zeroed */

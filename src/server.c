@@ -29,9 +29,16 @@ int main(int argc, char* argv[])
     DBG printf("found %d clients\n", n_clients);
 
     int res = get_client_info(main_sock, clients, n_clients);
-    if (res)
+    if (res < 0)
     {
         printf("get_client_info() failed\n");
+        close(main_sock);
+        return EXIT_FAILURE;
+    }
+    else
+    if (res < n_clients)
+    {
+        printf("Some clients haven't answered. Shutting down.\n");
         close(main_sock);
         return EXIT_FAILURE;
     }
