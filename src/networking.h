@@ -27,6 +27,11 @@
 
 #define HANDSHAKE_PORT  3000
 #define MAIN_PORT       3001
+#define KEEPALIVE_PORT  3002
+#define TCP_IDLE        2       // 2 sec waiting max
+#define TCP_CNT         2       // 2 ack packets sent max
+#define TCP_INTVL       1       // 1 sec delay
+#define TCP_SYN_RETRY   3
 
 /* Expects UDP socket */
 int send_address(int sock, struct sockaddr_in* sddr, int n_times);
@@ -34,16 +39,27 @@ int send_address(int sock, struct sockaddr_in* sddr, int n_times);
     Functions return amount of bytes read          */
 ssize_t send_msg(int sock, void* msg, size_t msg_size, int flags);
 ssize_t recv_msg(int sock, void* buf, size_t buf_size, int flags);
-
+/* Returns same socket */
+int set_tcp_keepalive(int sock, int idle, int cnt, int intvl);
 
 // Client
 
 #define N_NOTIFY_RETRIES 4
 
+struct server_pack
+{
+    int sock;
+    uint32_t serv_s_addr;
+};
+
 /* Opens fd */
+int create_keepalive_sock();
+int start_keepalive_check(int server, struct sockaddr_in* server_addr,
+                          struct server_pack* check_thread_arg);
 int find_server    (struct sockaddr_in* server_addr);
 int notify_server  (int server, struct sockaddr_in* server_addr);
 int server_handshake(struct sockaddr_in* server_addr);
+/* Changes port to MAIN_PORT in 'server_addr' */
 int establish_main_connection(struct sockaddr_in* server_addr);
 int send_info      (int server, size_t n_threads);
 int receive_bound  (int server, double* bound);
@@ -53,6 +69,7 @@ int receive_bound  (int server, double* bound);
 struct client_info
 {
     int sock;
+    int keepalive;
     int n_threads;
     uint32_t addr;
     int finished;
@@ -71,7 +88,7 @@ struct client_info
 #define CLIENTS_INFO_TIMEOUT      { .tv_sec = 0, .tv_usec = 200000 }
 #define CLIENTS_PING_TIMEOUT      { .tv_sec = 5, .tv_usec =      0 }
 
-int init_server();
+int init_server(int* main_sock, int* keepalive_sock);
 /* Expects 'clients' to be zeroed */
 int find_clients   (struct client_info clients[N_CLIENTS_MAX]);
 int wait_for_clients_start(int sock, 
@@ -86,6 +103,8 @@ void distribute_load(struct client_info clients[N_CLIENTS_MAX], int n_clients,
 int start_clients  (struct client_info clients[N_CLIENTS_MAX], int n_clients);
 int set_client_connections(struct client_info clients[N_CLIENTS_MAX],
                     int n_clients);
+int init_client_keepalive(int keepalive_sock,
+                    struct client_info clients[N_CLIENTS_MAX], int n_clients);
 int wait_for_clients_finish(struct client_info clients[N_CLIENTS_MAX],
                     int n_clients);
 double collect_info(struct client_info clients[N_CLIENTS_MAX], int n_clients);

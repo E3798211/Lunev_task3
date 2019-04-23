@@ -21,7 +21,7 @@ int send_address(int sock, struct sockaddr_in* addr, int n_times)
         }
     }
 
-    DBG printf("sent byte to %s %d times\n", inet_ntoa(addr->sin_addr), 
+    DBG printf("Sent byte to %s %d times\n", inet_ntoa(addr->sin_addr), 
                                              n_times);
 
     return EXIT_SUCCESS;
@@ -67,8 +67,145 @@ ssize_t recv_msg(int sock, void* buf, size_t msg_size, int flags)
     return bytes_read_all;
 }
 
+int set_tcp_keepalive(int sock, int idle, int cnt, int intvl)
+{
+    int res    = 0;
+    int option = 1;
+    errno = 0;
+    res = setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE,
+                     &option, sizeof(option));
+    if (res)
+    {
+        perror("setsockopt()");
+        printf("SO_KEEPALIVE failed\n");
+        return -1;
+    }
+    
+    option = idle;
+    errno = 0;
+    res = setsockopt(sock, IPPROTO_TCP, TCP_KEEPIDLE, 
+                     &option, sizeof(option));
+    if (res)
+    {
+        perror("setsockopt()");
+        printf("TCP_KEEPIDLE failed\n");
+        return -1;
+    }
+
+    option = cnt;
+    errno = 0;
+    res = setsockopt(sock, IPPROTO_TCP, TCP_KEEPCNT, 
+                     &option, sizeof(option));
+    if (res)
+    {
+        perror("setsockopt()");
+        printf("TCP_KEEPCNT failed\n");
+        return -1;
+    }
+
+    option = intvl;
+    errno = 0;
+    res = setsockopt(sock, IPPROTO_TCP, TCP_KEEPINTVL, 
+                     &option, sizeof(option));
+    if (res)
+    {
+        perror("setsockopt()");
+        printf("TCP_KEEPINTVL failed\n");
+        return -1;
+    }
+
+    return sock;
+}
 
 // Client
+
+int create_keepalive_sock()
+{
+    errno = 0;
+    int keep_alive_sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (keep_alive_sock < 0)
+    {
+        perror("socket()");
+        return EXIT_FAILURE;
+    }
+
+    int res = set_tcp_keepalive(keep_alive_sock, TCP_IDLE, TCP_CNT, TCP_INTVL);
+    if (res < 0)
+    {
+        printf("set_tcp_keepalive() failed\n");
+        return -1;
+    }
+
+    int n_syn_retries = TCP_SYN_RETRY;
+    errno = 0;
+    res = setsockopt(keep_alive_sock, IPPROTO_TCP, TCP_SYNCNT,
+                                      &n_syn_retries, sizeof(n_syn_retries));
+    if (res)
+    {
+        perror("setsockopt()");
+        printf("TCP_SYNCNT failed\n");
+        return -1;
+    }
+
+    return keep_alive_sock;
+}
+
+/* Function to check connection in the background 
+   Never returns. Return == error                 */
+static void* check_connection(void* arg)
+{
+    struct server_pack* con = (struct server_pack*)arg;
+
+    struct sockaddr_in server_addr;
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port   = htons(KEEPALIVE_PORT);
+    server_addr.sin_addr.s_addr = con->serv_s_addr;
+
+    int server = con->sock;
+
+    // TCP_SYNCNT set to only 3 -> thread won't wait for a long time
+    int res = connect(server, (struct sockaddr*)&server_addr, 
+                              sizeof(server_addr));
+    if (res)
+    {
+        perror("connect()");
+        exit(EXIT_FAILURE);
+    }
+    
+    int nfds = server + 1;
+    fd_set set;
+    FD_ZERO(&set);
+    FD_SET (server, &set);
+
+    errno = 0;
+    res = select(nfds, &set, NULL, NULL, NULL);
+    if (res < 0)
+    {
+        perror("select()");
+        exit (EXIT_FAILURE);
+    }
+    
+    // socket is available for read -> server's dead
+
+    exit(EXIT_FAILURE);
+}
+
+int start_keepalive_check(int server, struct sockaddr_in* server_addr,
+                          struct server_pack* check_thread_arg)
+{
+    check_thread_arg->sock        = server;
+    check_thread_arg->serv_s_addr = server_addr->sin_addr.s_addr;
+
+    pthread_t check_thread;
+    if (pthread_create(&check_thread, NULL, 
+                       check_connection, check_thread_arg))
+    {
+        perror("pthread_create()");
+        return EXIT_FAILURE;
+    }
+
+    return EXIT_SUCCESS;
+}
 
 int find_server(struct sockaddr_in* server_addr)
 {
@@ -225,8 +362,52 @@ int receive_bound(int server, double* bound)
 
 // Server
 
-int init_server()
+static int create_receiveing_sock(int domain, int type, int protocol,
+                                  const struct sockaddr_in* addr)
 {
+    errno = 0;
+    int sock = socket(domain, type, protocol);
+    if (sock < 0)
+    {
+        perror("socket()");
+        return -1;
+    }
+
+    int yes = 1;
+    errno = 0;
+    int res = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes));
+    if (res)
+    {
+        perror("setsockopt()");
+        return -1;
+    }
+    
+    errno = 0;
+    res = bind(sock, (struct sockaddr*)addr, sizeof(*addr));
+    if (res)
+    {
+        perror("bind()");
+        close(sock);
+        return -1;
+    }
+
+    errno = 0;
+    res = listen(sock, N_CLIENTS_MAX);
+    if (res)
+    {
+        perror("listen()");
+        close(sock);
+        return -1;
+    }
+
+    return sock;
+}
+
+int init_server(int* main_sock, int* keepalive_sock)
+{
+    assert(main_sock);
+    assert(keepalive_sock);
+/*
     errno = 0;
     int main_socket = socket(AF_INET, SOCK_STREAM | SOCK_NONBLOCK, 0);
     if (main_socket < 0)
@@ -244,13 +425,33 @@ int init_server()
         perror("setsockopt()");
         return -1;
     }
-
+*/
 
     struct sockaddr_in server_addr;
     server_addr.sin_family = AF_INET;
     server_addr.sin_port   = htons(MAIN_PORT);
     server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
+    *main_sock = create_receiveing_sock(AF_INET, SOCK_STREAM | SOCK_NONBLOCK,
+                                        0, &server_addr);
+    if (*main_sock < 0)
+    {
+        printf("create_receiveing_sock() failed\n");
+        printf("main_sock failed\n");
+        return EXIT_FAILURE;
+    }
+
+    server_addr.sin_port   = htons(KEEPALIVE_PORT);
+
+    *keepalive_sock = create_receiveing_sock(AF_INET, SOCK_STREAM, 0,
+                                             &server_addr);
+    if (*keepalive_sock < 0)
+    {
+        printf("create_receiveing_sock() failed\n");
+        printf("keepalive_sock failed\n");
+        return EXIT_FAILURE;
+    }
+/*
     errno = 0;
     res = bind(main_socket, (struct sockaddr*)&server_addr, 
                sizeof(server_addr));
@@ -271,6 +472,8 @@ int init_server()
     }
 
     return main_socket;
+*/
+    return EXIT_SUCCESS;
 }
 
 int find_clients(struct client_info clients[N_CLIENTS_MAX])
@@ -507,6 +710,14 @@ int set_client_connections(struct client_info clients[N_CLIENTS_MAX],
     int res = 0;
     for(int i = 0; i < n_clients; i++)
     {
+        res = set_tcp_keepalive(SOCK(i), 5, 2, 1);
+        if (res < 0)
+        {
+            printf("set_tcp_keepalive() failed\n");
+            return EXIT_FAILURE;
+        }
+
+/*
         int option = 1;
         errno = 0;
         res = setsockopt(SOCK(i), SOL_SOCKET, SO_KEEPALIVE,
@@ -550,10 +761,52 @@ int set_client_connections(struct client_info clients[N_CLIENTS_MAX],
             printf("TCP_KEEPINTVL failed\n");
             return EXIT_FAILURE;
         }
+*/
     }
 #undef SOCK
 
     return EXIT_SUCCESS;
+}
+
+int init_client_keepalive(int keepalive_sock,
+                struct client_info clients[N_CLIENTS_MAX], int n_clients)
+{
+    int clients_connected = 0;
+    while(clients_connected < n_clients)
+    {
+        fd_set set;
+        FD_ZERO(&set);
+        FD_SET (keepalive_sock, &set);
+        int nfds = keepalive_sock + 1;
+        struct timeval timeout = CLIENTS_PING_TIMEOUT;
+
+        errno = 0;
+        int ready = select(nfds, &set, NULL, NULL, &timeout);
+        if (ready < 0)
+        {
+            perror("select()");
+            return -1;
+        }
+        else
+        if (ready == 0)
+        {
+            break;
+        }
+        else
+        {
+            errno = 0;
+            int sock = accept(keepalive_sock, NULL, NULL);
+            if (sock < 0)
+            {
+                perror("accept()");
+                return -1;
+            }
+
+            clients[clients_connected++].keepalive = sock;
+        }
+    }
+
+    return clients_connected;
 }
 
 void distribute_load(struct client_info clients[N_CLIENTS_MAX], int n_clients,
@@ -693,7 +946,10 @@ void close_connections(struct client_info clients[N_CLIENTS_MAX],
                     int n_clients)
 {
     for(int i = 0; i < n_clients; i++)
+    {
         close(clients[i].sock);
+        close(clients[i].keepalive);
+    }
 }
 
 

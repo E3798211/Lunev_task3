@@ -19,6 +19,13 @@ int main(int argc, char* argv[])
         return EXIT_FAILURE;
     }
 
+    int keep_alive_sock = create_keepalive_sock();
+    if (keep_alive_sock < 0)
+    {
+        printf("create_keepalive_sock() failed\n");
+        return EXIT_FAILURE;
+    }
+
     struct sockaddr_in server_addr;
     res = server_handshake(&server_addr);
     if (res)
@@ -43,6 +50,16 @@ int main(int argc, char* argv[])
         return EXIT_FAILURE;
     }
     DBG printf("Info sent\n");
+
+    struct server_pack check_arg;
+    res = start_keepalive_check(keep_alive_sock, &server_addr,
+                                &check_arg);
+    if (res)
+    {
+        printf("start_keepalive_check() failed\n");
+        return EXIT_FAILURE;
+    }
+    DBG printf("Started checking is server's alive\n");
 
     double left_bound, right_bound;
     res = receive_bound(main_sock, &left_bound);
