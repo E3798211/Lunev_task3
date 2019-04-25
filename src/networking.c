@@ -67,8 +67,89 @@ ssize_t recv_msg(int sock, void* buf, size_t msg_size, int flags)
     return bytes_read_all;
 }
 
+int set_tcp_keepalive(int sock, int idle, int cnt, int intvl)
+{
+    int res    = 0;
+    int option = 1;
+    errno = 0;
+    res = setsockopt(sock, SOL_SOCKET, SO_KEEPALIVE,
+                     &option, sizeof(option));
+    if (res)
+    {
+        perror("setsockopt()");
+        printf("SO_KEEPALIVE failed\n");
+        return -1;
+    }
+    
+    option = idle;
+    errno = 0;
+    res = setsockopt(sock, IPPROTO_TCP, TCP_KEEPIDLE, 
+                     &option, sizeof(option));
+    if (res)
+    {
+        perror("setsockopt()");
+        printf("TCP_KEEPIDLE failed\n");
+        return -1;
+    }
+
+    option = cnt;
+    errno = 0;
+    res = setsockopt(sock, IPPROTO_TCP, TCP_KEEPCNT, 
+                     &option, sizeof(option));
+    if (res)
+    {
+        perror("setsockopt()");
+        printf("TCP_KEEPCNT failed\n");
+        return -1;
+    }
+
+    option = intvl;
+    errno = 0;
+    res = setsockopt(sock, IPPROTO_TCP, TCP_KEEPINTVL, 
+                     &option, sizeof(option));
+    if (res)
+    {
+        perror("setsockopt()");
+        printf("TCP_KEEPINTVL failed\n");
+        return -1;
+    }
+
+    return sock;
+}
 
 // Client
+
+/* Function to check connection in the background 
+   Never returns. Return == error                 */
+static void* check_connection(void* arg)
+{
+    int server = *((int*)arg);
+    
+    int tmp;
+    errno = 0;
+    recv(server, &tmp, sizeof(tmp), 0);
+    
+    printf("Assuming server's dead\n");
+    exit(EXIT_FAILURE);
+}
+
+int start_keepalive_check(int* server)
+{
+    if (set_tcp_keepalive(*server, 5, 2, 1) < 0)
+    {
+        printf("set_tcp_keepalive() failed\n");
+        return EXIT_FAILURE;
+    }
+
+    pthread_t check_thread;
+    if (pthread_create(&check_thread, NULL, check_connection, server))
+    {
+        perror("pthread_create()");
+        return EXIT_FAILURE;
+    }
+
+    return EXIT_SUCCESS;
+}
 
 int find_server(struct sockaddr_in* server_addr)
 {
@@ -507,47 +588,10 @@ int set_client_connections(struct client_info clients[N_CLIENTS_MAX],
     int res = 0;
     for(int i = 0; i < n_clients; i++)
     {
-        int option = 1;
-        errno = 0;
-        res = setsockopt(SOCK(i), SOL_SOCKET, SO_KEEPALIVE,
-                         &option, sizeof(option));
-        if (res)
+        res = set_tcp_keepalive(SOCK(i), 5, 2, 1);
+        if (res < 0)
         {
-            perror("setsockopt()");
-            printf("SO_KEEPALIVE failed\n");
-            return EXIT_FAILURE;
-        }
-        
-        option = 10;    // 10 sec until assuming connection dead
-        errno = 0;
-        res = setsockopt(SOCK(i), IPPROTO_TCP, TCP_KEEPIDLE, 
-                         &option, sizeof(option));
-        if (res)
-        {
-            perror("setsockopt()");
-            printf("TCP_KEEPIDLE failed\n");
-            return EXIT_FAILURE;
-        }
-
-        option = 5;     // 5 packets
-        errno = 0;
-        res = setsockopt(SOCK(i), IPPROTO_TCP, TCP_KEEPCNT, 
-                         &option, sizeof(option));
-        if (res)
-        {
-            perror("setsockopt()");
-            printf("TCP_KEEPCNT failed\n");
-            return EXIT_FAILURE;
-        }
-
-        option = 1;     // 1 sec between packets
-        errno = 0;
-        res = setsockopt(SOCK(i), IPPROTO_TCP, TCP_KEEPINTVL, 
-                         &option, sizeof(option));
-        if (res)
-        {
-            perror("setsockopt()");
-            printf("TCP_KEEPINTVL failed\n");
+            printf("set_tcp_keepalive() failed\n");
             return EXIT_FAILURE;
         }
     }

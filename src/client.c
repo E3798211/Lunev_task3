@@ -59,6 +59,12 @@ int main(int argc, char* argv[])
     }
     DBG printf("Left =  %lg; Right = %lg\n", left_bound, right_bound);
 
+    res = start_keepalive_check(&main_sock);
+    if (res)
+    {
+        printf("start_keepalive_check() failed\n");
+        return EXIT_FAILURE;
+    }
 
 // TEMPORARY
 //    left_bound = -1;

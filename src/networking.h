@@ -34,12 +34,14 @@ int send_address(int sock, struct sockaddr_in* sddr, int n_times);
     Functions return amount of bytes read          */
 ssize_t send_msg(int sock, void* msg, size_t msg_size, int flags);
 ssize_t recv_msg(int sock, void* buf, size_t buf_size, int flags);
+int set_tcp_keepalive(int sock, int idle, int cnt, int intvl);
 
 
 // Client
 
 #define N_NOTIFY_RETRIES 4
 
+int start_keepalive_check(int* server);
 /* Opens fd */
 int find_server    (struct sockaddr_in* server_addr);
 int notify_server  (int server, struct sockaddr_in* server_addr);
